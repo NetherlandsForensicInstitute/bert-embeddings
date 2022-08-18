@@ -53,3 +53,11 @@ class BERTEmbeddings(MetaExtractionPlugin):
             trace.add_tracelet(to_tracelet(embedding))
 
 
+if __name__ == "__main__":
+    run_with_hanskenpy(BERTEmbeddings, endpoint='http://localhost:9091/gatekeeper/', 
+        # the keystore REST endpoint when this script was exported, note that
+        # this can be overridden with --keystore
+        keystore='http://localhost:9090/keystore/',
+        # the project id of the project named "Semantic search",
+        project='326c693c-45bc-4648-b8e3-24abb4f43c1d')
+       
