@@ -9,10 +9,8 @@ LABEL hansken.extraction.plugin.image="bert-embeddings"
 LABEL hansken.extraction.plugin.name="BERTEmbeddings"
 
 COPY . /app
-
 EXPOSE 8999
-
-RUN python bert_embeddings.py  # run the Python file once to cache the required models
 WORKDIR /app
+RUN python bert_embeddings.py  # run the Python file once to cache the required models
 ENTRYPOINT ["/usr/local/bin/serve_plugin"]
 CMD ["bert_embeddings.py", "8999"]
