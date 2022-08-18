@@ -7,7 +7,7 @@ RUN python -m pip install --no-cache hansken_extraction_plugin==0.5.0 sentence-t
 LABEL maintainer="i.ellis@nfi.nl"
 LABEL hansken.extraction.plugin.image="bert-embeddings"
 LABEL hansken.extraction.plugin.name="BERTEmbeddings"
-
+ENV SENTENCE_TRANSFORMERS_HOME="/tmp/"
 COPY . /app
 EXPOSE 8999
 WORKDIR /app
