@@ -8,18 +8,10 @@ LABEL maintainer="i.ellis@nfi.nl"
 LABEL hansken.extraction.plugin.image="bert-embeddings"
 LABEL hansken.extraction.plugin.name="BERTEmbeddings"
 ENV SENTENCE_TRANSFORMERS_HOME="/tmp/"
-
-RUN useradd -ms /bin/bash admin
-
 COPY . /app
 EXPOSE 8999
 WORKDIR /app
-
-RUN chown -R admin:admin /app
-RUN chmod 755 /app
-USER admin
-
 RUN python bert_embeddings.py  # run the Python file once to cache the required models
+RUN chmod -R 777 /tmp  # temporary, see why the cache dir can't be written to
 ENTRYPOINT ["/usr/local/bin/serve_plugin"]
 CMD ["bert_embeddings.py", "8999"]
-
