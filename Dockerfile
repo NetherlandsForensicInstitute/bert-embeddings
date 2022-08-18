@@ -11,6 +11,7 @@ ENV SENTENCE_TRANSFORMERS_HOME="/tmp/"
 COPY . /app
 EXPOSE 8999
 WORKDIR /app
+RUN chmod 777 /tmp  # temporary, see why the cache dir can't be written to
 RUN python bert_embeddings.py  # run the Python file once to cache the required models
 ENTRYPOINT ["/usr/local/bin/serve_plugin"]
 CMD ["bert_embeddings.py", "8999"]
