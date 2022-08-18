@@ -1,0 +1,56 @@
+# %% [markdown]
+This notebook can be used to eyeball the quality of the generated embeddings. 
+To compare similarities, use one trace as a query (the `uid` variable) and sort the case based on this input trace, and replace the `project` parameter in the `connect_project` call.
+# %% [python]
+import sys
+from types import SimpleNamespace
+
+from hansken.connect import connect_project
+
+in_browser = 'js' in sys.modules
+context = connect_project(endpoint='http://localhost:9091/gatekeeper/',
+                          project='059c83a1-a38b-4144-a661-4a26fa588071',
+                          keystore='http://localhost:9090/keystore/',
+                          auth=SimpleNamespace() if in_browser else None,
+                          interactive=True)
+# %% [python]
+import numpy
+from js import window
+
+uid = "5abe5598-24d8-43b6-aae8-fef18903a7aa:0-0-2-1-1-1a0-f"
+
+query_hash = context.trace(uid).get('prediction')[0]['embedding']
+print(context.trace(uid).get('chatMessage.message'))
+print(numpy.frombuffer(bytes(query_hash), dtype='>f4'))
+# %% [python]
+from js import window
+from hansken.util import Vector
+
+query_hash = Vector.from_sequence(query_hash)
+print(query_hash)
+# %% [python]
+from base64 import b64encode
+from hansken.query import Sort
+from js import document
+import numpy
+from scipy.spatial.distance import euclidean
+
+candidates = context.search(
+    'chatMessage.message', sort=Sort(
+        field='prediction.embedding',
+        filter='prediction.modelName:bert',
+        mode='euclideanDistance',
+        value=query_hash),
+    select=['chatMessage'],
+    count=50)
+
+output = document.createElement('table')
+table_header = document.createElement('tr')
+table_header.innerHTML = "<th>Trace uid</th><th>Euclidean distance</th><th>Preview</th>"
+output.append(table_header)
+query_hash_as_intarray = numpy.frombuffer(bytes(query_hash), dtype='>f4').astype(int)
+for result in candidates:
+    table_row = document.createElement('tr')
+    table_row.innerHTML = f'<td><a href="http://localhost:9090/gui/technisch/#/projects/{context.project_id}/trace/{result.uid}/detail" target="_blank">{result.uid}</a></td><td></td><td>{result["chatMessage.message"]}</td>'   
+    output.appendChild(table_row)
+output
