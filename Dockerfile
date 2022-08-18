@@ -8,12 +8,11 @@ LABEL maintainer="i.ellis@nfi.nl"
 LABEL hansken.extraction.plugin.image="bert-embeddings"
 LABEL hansken.extraction.plugin.name="BERTEmbeddings"
 
-COPY . /
+COPY . /app
 
 EXPOSE 8999
 
-RUN mkdir /.cache
 RUN python bert_embeddings.py  # run the Python file once to cache the required models
-
+WORKDIR /app
 ENTRYPOINT ["/usr/local/bin/serve_plugin"]
 CMD ["bert_embeddings.py", "8999"]
