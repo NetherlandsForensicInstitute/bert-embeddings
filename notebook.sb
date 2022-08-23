@@ -36,7 +36,7 @@ import numpy
 from scipy.spatial.distance import euclidean
 
 candidates = context.search(
-    'chatMessage.message', sort=Sort(
+    'chatMessage.message:*', sort=Sort(
         field='prediction.embedding',
         filter='prediction.modelName:bert',
         mode='euclideanDistance',
