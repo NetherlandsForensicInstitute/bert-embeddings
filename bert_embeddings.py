@@ -7,14 +7,14 @@ from logbook import Logger
 from sentence_transformers import SentenceTransformer
 
 log = Logger(__name__)
-MODEL_NAME = 'all-MiniLM-L6-v2'
-model = SentenceTransformer(MODEL_NAME)
+MODEL_NAMES = ['all-MiniLM-L6-v2', 'bert-base-dutch-cased-snli']
+models = [SentenceTransformer(model_name) for model_name in MODEL_NAMES]
 
 
-def to_tracelet(embedding):
+def to_tracelet(embedding, model_name):
     return Tracelet('prediction', {
         'prediction.type': 'bert-embedding',
-        'prediction.modelName': f'BERT+{MODEL_NAME}',
+        'prediction.modelName': f'sentence_transformers+{model_name}',
         'prediction.embedding': Vector.from_sequence(embedding)
     })
 
@@ -48,9 +48,10 @@ class BERTEmbeddings(MetaExtractionPlugin):
         # TODO Maybe add textMessage.message (mobile text message) and email via data stream
         chatmessage = trace.get('chatMessage.message', None)
         if chatmessage:
-            embedding = model.encode(chatmessage, batch_size=1)
-            log.info(str(embedding))
-            trace.add_tracelet(to_tracelet(embedding))
+            for model, model_name in zip(models, MODEL_NAMES):
+                embedding = model.encode(chatmessage, batch_size=1)
+                log.info(str(embedding))
+                trace.add_tracelet(to_tracelet(embedding, model_name))
 
 """
 if __name__ == "__main__":
