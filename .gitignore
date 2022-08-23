@@ -109,6 +109,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.envBertembeddingsGithub/
 
 # Spyder project settings
 .spyderproject
