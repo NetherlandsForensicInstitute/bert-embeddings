@@ -7,7 +7,7 @@ from logbook import Logger
 from sentence_transformers import SentenceTransformer
 
 log = Logger(__name__)
-MODEL_NAMES = ['all-MiniLM-L6-v2', 'bert-base-dutch-cased-snli']
+MODEL_NAMES = ['all-MiniLM-L6-v2', 'clip-ViT-B-32']
 models = [SentenceTransformer(model_name) for model_name in MODEL_NAMES]
 
 
