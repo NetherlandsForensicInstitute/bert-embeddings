@@ -1,0 +1,102 @@
+# %% [markdown]
+This notebook can be used to eyeball the quality of the generated embeddings. 
+To compare similarities, use one trace as a query (the `uid` variable) and sort the case based on this input trace, and replace the `project` parameter in the `connect_project` call.
+# %% [python]
+import sys
+from types import SimpleNamespace
+
+from hansken.connect import connect_project
+
+in_browser = 'js' in sys.modules
+context = connect_project(endpoint='https://gatekeeper01.test.hansken.holmes.nl/gatekeeper/',
+                          project='411cefbf-f995-416f-9eb2-3cd2f378ca74',
+                          keystore='https://keystore01.test.hansken.holmes.nl/keystore/',
+                          auth=SimpleNamespace() if in_browser else None,
+                          interactive=True)
+# %% [python]
+import numpy
+from js import window
+
+#DREIGEND
+uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8", #komt niet terug in resultaten, rest wel
+            "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
+
+#RANDOM COMBI: DREIGEND,  ETEN, AIRPORT, FREEZING,CHAMPAGNE
+"""
+uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d", #komt niet terug in resultaten, rest wel
+            "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"] #komt niet terug in resultaten, rest wel
+"""
+query_hash_array_list = []
+
+for uid in uid_list:
+  query_hash = context.trace(uid).get('prediction')[0]['embedding']
+  query_hash_array = numpy.frombuffer(bytes(query_hash), dtype='>f4')
+  query_hash_array_list.append(query_hash_array)
+
+  #print(context.trace(uid).get('chatMessage.message'))
+  #print(numpy.frombuffer(bytes(query_hash), dtype='>f4'))
+  
+query_hash_array_sum = 0
+for query_hash_array in query_hash_array_list:
+  query_hash_array_sum = query_hash_array_sum + query_hash_array
+
+query_hash_array_mean =query_hash_array_sum/len(query_hash_array_list)
+print(query_hash_array_mean)
+
+query_hash_array_mean =query_hash_array_sum/len(query_hash_array_list)
+print(query_hash_array_mean)
+# %% [python]
+from js import window
+from hansken.util import Vector
+
+query_hash = Vector.from_sequence(query_hash_array_mean)
+print(query_hash)
+# %% [python]
+uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8",
+            "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
+
+"""
+uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d",
+            "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"]
+"""
+
+for uid in uid_list:
+  print(context.trace(uid).get('chatMessage.message'))
+# %% [python]
+from base64 import b64encode
+from hansken.query import Sort
+from js import document
+import numpy
+from scipy.spatial.distance import euclidean
+
+candidates = context.search(
+    'chatMessage.message:*', sort=Sort(
+        field='prediction.embedding',
+        filter='prediction.modelName:bert',
+        mode='euclideanDistance',
+        value=query_hash),
+    select=['chatMessage'],
+    count=50)
+
+output = document.createElement('table')
+table_header = document.createElement('tr')
+table_header.innerHTML = "<th>Trace uid</th><th>Euclidean distance</th><th>Preview</th>"
+output.append(table_header)
+query_hash_as_intarray = numpy.frombuffer(bytes(query_hash), dtype='>f4').astype(int)
+for result in candidates:
+    table_row = document.createElement('tr')
+    table_row.innerHTML = f'<td><a href="http://localhost:9090/gui/technisch/#/projects/{context.project_id}/trace/{result.uid}/detail" target="_blank">{result.uid}</a></td><td></td><td>{result["chatMessage.message"]}</td>'   
+    output.appendChild(table_row)
+output
