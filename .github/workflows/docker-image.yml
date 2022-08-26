@@ -20,8 +20,17 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}   
     - uses: actions/checkout@v3
+    - name: Set up Python "3.10"
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install hansken-extraction-plugin==0.6.1 sentence-transformers
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Build the Docker image    
       run: |
-        docker build -t bert-embeddings .
+        build_plugin bert_embeddings.py . bert-embeddings
         docker tag bert-embeddings ghcr.io/netherlandsforensicinstitute/bert-embeddings:latest
         docker push ghcr.io/netherlandsforensicinstitute/bert-embeddings:latest

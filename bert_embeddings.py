@@ -23,7 +23,6 @@ class BERTEmbeddings(MetaExtractionPlugin):
 
     def plugin_info(self):
         plugin_info = PluginInfo(
-            self,
             id=PluginId(domain='nfi.nl', category='media', name='BERT'),
             version='2022.8.25',
             description='BERT embeddings for chatmessages',
@@ -32,7 +31,7 @@ class BERTEmbeddings(MetaExtractionPlugin):
             webpage_url='https://git.eminjenv.nl/-/ide/project/hanskaton/extraction-plugins/bert-embeddings',
             matcher='type=chatMessage',
             license="Apache License 2.0",
-            resources=PluginResources.builder().maximum_cpu(1).maximum_memory(12000).build(),
+            resources=PluginResources(maximum_cpu=1, maximum_memory=12000),
         )
         log.debug(f'returning plugin info: {plugin_info}')
         return plugin_info
