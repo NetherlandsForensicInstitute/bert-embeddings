@@ -17,8 +17,11 @@ context = connect_project(endpoint='https://gatekeeper01.test.hansken.holmes.nl/
 import numpy
 from js import window
 
-uid = "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-6-2c-ce2"
+uid = "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a"
 ##DREIGEND 
+#wanneer je met hansken standaard zoekt krijg je alleen exacte matches
+#of je moet maar een paar woorden gebruiken en dan krijg je ook alleen de exacte macthes van zinnen waar die woorden in voorkomen.
+#2686f05d-0e60-4847-968a-61f8dddef801:0-3-9-16
 #d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8
 #d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6
 #b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29
@@ -27,6 +30,7 @@ uid = "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-6-2c-ce2"
 #2686f05d-0e60-4847-968a-61f8dddef801:0-3-9-32
 
 #HOE LAAT GAAN WE ETEN VANAVOND?
+#wanneer je met hansken standaar zoekt, krijg je alleen exacte matches.
 #b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3
 
 #ON MY WAY TO AIRPORT
@@ -45,8 +49,12 @@ uid = "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-6-2c-ce2"
 #DRUGS PROMO
 #a0260a2a-d576-4b2c-a84c-682ac94bee14:0-4-6-6
 
+#MONEY/INVEST
+#2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-1c
+
 #SNAPT DE LADING NIET VAN DIT BERICHT
 #b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-27
+#2686f05d-0e60-4847-968a-61f8dddef801:0-3-9-48
 
 query_hash = context.trace(uid).get('prediction')[0]['embedding']
 print(context.trace(uid).get('chatMessage.message'))

@@ -2,10 +2,18 @@
 This notebook can be used to eyeball the quality of the generated embeddings. 
 To compare similarities, use one trace as a query (the `uid` variable) and sort the case based on this input trace, and replace the `project` parameter in the `connect_project` call.
 # %% [python]
+#MLT + LLT COMBINED VECTORS
 import sys
 from types import SimpleNamespace
-
 from hansken.connect import connect_project
+import numpy as np
+from js import window
+from hansken.util import Vector
+from base64 import b64encode
+from hansken.query import Sort
+from js import document
+from scipy.spatial.distance import euclidean
+import pandas as pd
 
 in_browser = 'js' in sys.modules
 context = connect_project(endpoint='https://gatekeeper01.test.hansken.holmes.nl/gatekeeper/',
@@ -13,35 +21,93 @@ context = connect_project(endpoint='https://gatekeeper01.test.hansken.holmes.nl/
                           keystore='https://keystore01.test.hansken.holmes.nl/keystore/',
                           auth=SimpleNamespace() if in_browser else None,
                           interactive=True)
-# %% [python]
-import numpy as np
-from js import window
-"""
-#DREIGEND
-uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8", #komt niet terug in resultaten, rest wel
+
+uid_list_mlt = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8", 
             "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6",
-            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
-"""
-#RANDOM COMBI: DREIGEND,  ETEN, AIRPORT, FREEZING,CHAMPAGNE
 
-uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
-            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+uid_list_llt = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
             "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
-            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d", #komt niet terug in resultaten, rest wel
-            "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"] #komt niet terug in resultaten, rest wel
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d", 
+            "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"] 
+
+def combined_query_hash(uid_list):
+  query_hash_array_list = []
+  for uid in uid_list:
+    query_hash = context.trace(uid).get('prediction')[0]['embedding']
+    query_hash_array = np.frombuffer(bytes(query_hash), dtype='>f4')
+    query_hash_array_list.append(query_hash_array)
+  query_hash_array_mean = np.mean(query_hash_array_list, axis = 0)
+  combined_query_hash = Vector.from_sequence(query_hash_array_mean)
+  return combined_query_hash
+
+def candidates(combined_query_hash):
+  candidates = context.search(
+    'chatMessage.message:*', sort=Sort(
+      field='prediction.embedding',
+      filter='prediction.modelName:bert',
+      mode='euclideanDistance',
+      value=combined_query_hash),
+  select=['chatMessage'],
+  count=50)
+  return candidates
+
+combined_query_hash_mlt = combined_query_hash(uid_list_mlt)
+combined_query_hash_llt = combined_query_hash(uid_list_llt)
+
+candidates_mlt = candidates(combined_query_hash_mlt)
+candidates_llt = candidates(combined_query_hash_llt)
+
+#TO DO rank mlt and llt candidates
+## rank variable ascending for all mlt candidates
+## ran variable ascending for asll llt candidates
+## combined rank: if uid (message)= same then sum their rank, this is he final rank. 
+## condition: if rank for some cases is the same, messages with higher llt rank then mlt rank get lower in the order.
+
+output = document.createElement('table')
+table_header = document.createElement('tr')
+table_header.innerHTML = "<th>Trace uid</th><th>Euclidean distance</th><th>Preview</th>"
+output.append(table_header)
+
+for result in candidates_llt:
+    table_row = document.createElement('tr')
+    table_row.innerHTML = f'<td><a href="http://localhost:9090/gui/technisch/#/projects/{context.project_id}/trace/{result.uid}/detail" target="_blank">{result.uid}</a></td><td></td><td>{result["chatMessage.message"]}</td>'   
+    output.appendChild(table_row)
+output
+
+# %% [python]
+#COMBINED VECTORS ONLY MLT
+import sys
+from types import SimpleNamespace
+from hansken.connect import connect_project
+import numpy as np
+from js import window
+from hansken.util import Vector
+
+#DREIGEND
+uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8", #mean/median/prod:komt niet terug in resultaten
+             "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6", #prod: komt niet terug in resultaten
+             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29", #prod:  komt niet terug in resultaten
+             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
+             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
+
+#RANDOM COMBI: DREIGEND,  ETEN, AIRPORT, FREEZING,CHAMPAGNE
+# uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+#              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+#              "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
+#              "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d", #mean/median:komt niet terug in resultaten
+#              "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"] #mean/median:komt niet terug in resultaten
+# #product geeft niet oorspronkelijke berichten weer, en gaat verder ook niet over relavnte topics (alleen dreiging + eten)
+
 
 query_hash_array_list = []
 
 for uid in uid_list:
   query_hash = context.trace(uid).get('prediction')[0]['embedding']
-  query_hash_array = numpy.frombuffer(bytes(query_hash), dtype='>f4')
+  query_hash_array = np.frombuffer(bytes(query_hash), dtype='>f4')
   query_hash_array_list.append(query_hash_array)
 
-  #print(context.trace(uid).get('chatMessage.message'))
-  #print(numpy.frombuffer(bytes(query_hash), dtype='>f4'))
-  
 #get mean
 query_hash_array_mean = np.mean(query_hash_array_list, axis = 0)
 
@@ -51,27 +117,20 @@ query_hash_array_median = np.median(query_hash_array_list, axis = 0)
 #get product
 query_hash_array_prod = np.prod(query_hash_array_list, axis = 0)
 
-#get distance
-query_hash_array_dist = np.dist(query_hash_array_list, axis = 0)
+query_hash = Vector.from_sequence(query_hash_array_prod)
 # %% [python]
-from js import window
-from hansken.util import Vector
-
-query_hash = Vector.from_sequence(query_hash_array_mean)
-print(query_hash)
-# %% [python]
-# uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8",
-#             "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6",
-#             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
-#             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
-#             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
+uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8",
+              "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6",
+              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
+              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
 
 
-uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
-            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
-            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
-            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d",
-            "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"]
+# uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+#             "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+#             "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
+#             "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d",
+#             "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"]
 
 
 for uid in uid_list:
