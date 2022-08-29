@@ -1,0 +1,259 @@
+# %% [markdown]
+This notebook can be used to eyeball the quality of the generated embeddings.
+To compare similarities, use one trace as a query (the `uid` variable) and sort the case based on this input trace, and replace the `project` parameter in the `connect_project` call.
+
+\
+Useful uid’s in the crsytal clear project for demoing semantic search success. A bigger test dataset can be found here: <https://www.atlassian-ext.holmes.nl/confluence/display/HAN/Test+dataset>
+
+\
+**Threatening**
+
+2686f05d-0e60-4847-968a-61f8dddef801:0-3-9-16 
+
+d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8 
+
+d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6 
+
+b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29 
+
+b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28 
+
+b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30 
+
+[d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-6-2c-ce2](https://frontend01.test.hansken.holmes.nl/technisch/#/projects/411cefbf-f995-416f-9eb2-3cd2f378ca74/trace/d6169d2d-6346-4eb5-acc8-ba2c3ddf8460%3A0-6-2c-ce2/detail?queryId=87630856c08d3ef983ca1ad90dd939f9)
+
+\
+**Eating**
+
+b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3
+
+\
+**Airport**
+
+a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a
+
+\
+**Freezing**
+
+ a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d
+
+\
+**Champaign**
+
+2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10
+
+\
+**Examples of unsuccessful finds**
+
+b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-27 
+
+2686f05d-0e60-4847-968a-61f8dddef801:0-3-9-48
+# %% [markdown]
+## **Demo free text search**
+# %% [python]
+
+import requests
+from hansken.util import Vector
+query_vector = Vector.from_base64(
+    requests.get('http://localhost:9092/', params={'model': 'all-MiniLM-L6-v2', 'sentence': 'Test sentence'}).text
+)
+# %% [markdown]
+# **Semantic similarity search**
+
+## **Searching with 1 vector**
+# %% [python]
+import sys
+from types import SimpleNamespace
+from hansken.connect import connect_project
+import numpy
+from js import window
+from hansken.util import Vector
+from base64 import b64encode
+from hansken.query import Sort
+from js import document
+from scipy.spatial.distance import euclidean
+
+in_browser = 'js' in sys.modules
+context = connect_project(endpoint='https://gatekeeper01.test.hansken.holmes.nl/gatekeeper/',
+                          project='411cefbf-f995-416f-9eb2-3cd2f378ca74',
+                          keystore='https://keystore01.test.hansken.holmes.nl/keystore/',
+                          auth=SimpleNamespace() if in_browser else None,
+                          interactive=True)
+
+#uid = "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10" #champaign
+#uid = " a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d" #freezing
+#uid = "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-6-2c-ce2" #killing and eating
+#uid = "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8" #subtile threatening language
+
+
+for prediction in context.trace(uid).get('prediction'):
+      if prediction['modelName'] =="sentence_transformers+all-MiniLM-L6-v2":
+        query_hash = prediction['embedding']
+        
+print(context.trace(uid).get('chatMessage.message'))
+#print(numpy.frombuffer(bytes(query_hash), dtype='>f4'))
+
+query_hash = Vector.from_sequence(query_hash)
+
+candidates = context.search(
+    'chatMessage.message:*', sort=Sort(
+        field='prediction.embedding',
+        filter='prediction.modelName:"sentence_transformers+all-MiniLM-L6-v2"',
+        mode='euclideanDistance',
+        value=query_hash),
+    select=['chatMessage'],
+    count=50)
+
+output = document.createElement('table')
+table_header = document.createElement('tr')
+table_header.innerHTML = "<th>Trace uid</th><th>Euclidean distance</th><th>Preview</th>"
+output.append(table_header)
+query_hash_as_intarray = numpy.frombuffer(bytes(query_hash), dtype='>f4').astype(int)
+for result in candidates:
+    table_row = document.createElement('tr')
+    table_row.innerHTML = f'<td><a href="http://localhost:9090/gui/technisch/#/projects/{context.project_id}/trace/{result.uid}/detail" target="_blank">{result.uid}</a></td><td></td><td>{result["chatMessage.message"]}</td>'   
+    output.appendChild(table_row)
+output
+
+# %% [markdown]
+## **Searching with combined vectors: MLT**
+# %% [python]
+import sys
+from types import SimpleNamespace
+from hansken.connect import connect_project
+import numpy
+from js import window
+from hansken.util import Vector
+
+from base64 import b64encode
+from hansken.query import Sort
+from js import document
+from scipy.spatial.distance import euclidean
+
+uid_list = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8", 
+              "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6", 
+              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29", 
+              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
+              "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
+
+# uid_list = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-29",
+#               "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+#               "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
+#               "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d",
+#               "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"] 
+
+
+for uid in uid_list:
+  print(context.trace(uid).get('chatMessage.message'))
+
+query_hash_array_list = []
+
+for uid in uid_list:
+  query_hash = context.trace(uid).get('prediction')[0]['embedding']
+  query_hash_array = numpy.frombuffer(bytes(query_hash), dtype='>f4')
+  query_hash_array_list.append(query_hash_array)
+
+#get mean
+query_hash_array_mean = numpy.mean(query_hash_array_list, axis = 0)
+
+#get median
+query_hash_array_median = numpy.median(query_hash_array_list, axis = 0)
+
+#get product
+query_hash_array_prod = numpy.prod(query_hash_array_list, axis = 0)
+
+candidates = context.search(
+    'chatMessage.message:*', sort=Sort(
+        field='prediction.embedding',
+        filter='prediction.modelName:"sentence_transformers+all-MiniLM-L6-v2"',
+        mode='euclideanDistance',
+        value=query_hash),
+    select=['chatMessage'],
+    count=50)
+
+output = document.createElement('table')
+table_header = document.createElement('tr')
+table_header.innerHTML = "<th>Trace uid</th><th>Euclidean distance</th><th>Preview</th>"
+output.append(table_header)
+query_hash_as_intarray = numpy.frombuffer(bytes(query_hash_array_mean), dtype='>f4').astype(int)
+for result in candidates:
+    table_row = document.createElement('tr')
+    table_row.innerHTML = f'<td><a href="http://localhost:9090/gui/technisch/#/projects/{context.project_id}/trace/{result.uid}/detail" target="_blank">{result.uid}</a></td><td></td><td>{result["chatMessage.message"]}</td>'   
+    output.appendChild(table_row)
+output
+# %% [markdown]
+## Searching with combined vectors: MLT + LLT
+# %% [markdown]
+Searching with combined vectors, MLT (more like this) combined with LLT (less like this) is still a work in progress. The logic is programmed, however, it takes too long to retrieve the results. 
+# %% [python]
+import sys
+from types import SimpleNamespace
+from hansken.connect import connect_project
+import numpy as np
+from js import window
+from hansken.util import Vector
+from base64 import b64encode
+from hansken.query import Sort
+from js import document
+from scipy.spatial.distance import euclidean
+import pandas as pd
+
+in_browser = 'js' in sys.modules
+context = connect_project(endpoint='https://gatekeeper01.test.hansken.holmes.nl/gatekeeper/',
+                          project='411cefbf-f995-416f-9eb2-3cd2f378ca74',
+                          keystore='https://keystore01.test.hansken.holmes.nl/keystore/',
+                          auth=SimpleNamespace() if in_browser else None,
+                          interactive=True)
+
+uid_list_mlt = ["d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-8", 
+            "d6169d2d-6346-4eb5-acc8-ba2c3ddf8460:0-1-0-0-0-2-1-0-0-1-c-1b-6",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-28",
+            "b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-3-30"]
+
+uid_list_llt = ["b94ab972-6bcb-44d6-b08b-d081a33320b2:0-1-0-0-0-1-1-1-0-15-b-2-3",
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-a",
+            "a0260a2a-d576-4b2c-a84c-682ac94bee14:0-1-0-2-0-6-2-5-161-d", 
+            "2686f05d-0e60-4847-968a-61f8dddef801:0-3-3-10"] 
+
+def combined_query_hash(uid_list):
+  query_hash_array_list = []
+  for uid in uid_list:
+    for prediction in context.trace(uid).get('prediction'):
+      if prediction['modelName'] =="sentence_transformers+all-MiniLM-L6-v2":
+        query_hash = prediction['embedding']
+    query_hash_array = np.frombuffer(bytes(query_hash), dtype='>f4')
+    query_hash_array_list.append(query_hash_array)
+  query_hash_array_mean = np.mean(query_hash_array_list, axis = 0)
+  combined_query_hash = Vector.from_sequence(query_hash_array_mean)
+  return combined_query_hash
+
+  
+def candidates(combined_query_hash):
+  candidates = context.search(
+    'chatMessage.message:*', sort=Sort(
+      field='prediction.embedding',
+      filter='prediction.modelName:"sentence_transformers+all-MiniLM-L6-v2"',
+      mode='euclideanDistance',
+      value=combined_query_hash),
+  select=['chatMessage'],
+  count=50
+  )
+  return  [{'uid': candidate.uid, 'chatMessage.message': candidate['chatMessage.message']} for candidate in candidates]
+
+import pandas
+
+combined_query_hash_mlt = combined_query_hash(uid_list_mlt)
+combined_query_hash_llt = combined_query_hash(uid_list_llt)
+
+candidates_mlt = candidates(combined_query_hash_mlt)
+candidates_llt = candidates(combined_query_hash_llt)
+
+df_mlt = pandas.DataFrame(candidates_mlt)
+df_mlt["rank"] = range(1,len(df_mlt)+1)
+
+df_llt = pandas.DataFrame(candidates_llt)
+df_llt["rank"] = sorted(list(range(1, len(df_llt)+1)), reverse = True)
+
+df_all = pandas.DataFrame(df_mlt).set_index('uid').join(pandas.DataFrame(df_llt).set_index('uid'), rsuffix='_llt', lsuffix='_mlt', how = 'outer')
+df_all['combined_rank'] = df_all.rank_mlt + df_all.rank_llt
+df_all
