@@ -2,6 +2,16 @@
 Spins up a Flask server that can do inference using the sentence transformers.
 
 Definitely not the final product, just for demo purposes
+
+How to use it (from the notebook context for example):
+```python
+import requests
+from hansken.util import Vector
+
+query_vector = Vector.from_base64(
+    requests.get('http://localhost:9092/', params={'model': 'all-MiniLM-L6-v2', 'sentence': 'Test sentence'}).text
+)
+```
 """
 from flask import Flask, request
 from sentence_transformers import SentenceTransformer
