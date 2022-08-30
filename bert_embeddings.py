@@ -13,8 +13,8 @@ models = [SentenceTransformer(model_name) for model_name in MODEL_NAMES]
 
 def to_tracelet(embedding, model_name):
     return Tracelet('prediction', {
-        'prediction.type': 'bert-embedding',
-        'prediction.modelName': f'sentence_transformers+{model_name}',
+        'prediction.type': 'sentence-transformer',
+        'prediction.modelName': model_name,
         'prediction.embedding': Vector.from_sequence(embedding)
     })
 
@@ -24,7 +24,7 @@ class BERTEmbeddings(MetaExtractionPlugin):
     def plugin_info(self):
         plugin_info = PluginInfo(
             id=PluginId(domain='nfi.nl', category='media', name='BERT'),
-            version='2022.8.25',
+            version='2022.8.30',
             description='BERT embeddings for chatmessages',
             author=Author('Isadora Ellis', 'i.ellis@nfi.nl', 'NFI'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
