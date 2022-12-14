@@ -23,5 +23,5 @@ Or clone (and modify) this repository and build your own copy using
 ```bash
 git clone https://github.com/netherlandsforensicinstitute/bert-embeddings
 cd bert-embeddings
-docker build -t bert-embeddings .
+build_plugin bert_embeddings.py . bert-embeddings
 ```
