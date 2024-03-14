@@ -1,6 +1,6 @@
 FROM python:3.10
 
-RUN python -m pip install --no-cache hansken_extraction_plugin==0.7.2 sentence-transformers
+RUN python -m pip install --no-cache hansken_extraction_plugin sentence-transformers
 
 LABEL maintainer="i.ellis@nfi.nl"
 LABEL hansken.extraction.plugin.image="bert-embeddings"
