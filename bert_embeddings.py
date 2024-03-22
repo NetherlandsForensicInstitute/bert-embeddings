@@ -24,11 +24,11 @@ class BERTEmbeddings(MetaExtractionPlugin):
     def plugin_info(self):
         plugin_info = PluginInfo(
             id=PluginId(domain='nfi.nl', category='media', name='BERT'),
-            version='2022.12.13',
+            version='2024.3.14',
             description='BERT embeddings for chatmessages',
             author=Author('Isadora Ellis', 'i.ellis@nfi.nl', 'NFI'),
             maturity=MaturityLevel.PROOF_OF_CONCEPT,
-            webpage_url='https://git.eminjenv.nl/-/ide/project/hanskaton/extraction-plugins/bert-embeddings',
+            webpage_url='https://github.com/NetherlandsForensicInstitute/bert-embeddings/',
             matcher='type=chatMessage',
             license="Apache License 2.0",
             resources=PluginResources(maximum_cpu=1, maximum_memory=12000),
@@ -53,10 +53,8 @@ class BERTEmbeddings(MetaExtractionPlugin):
                 trace.add_tracelet(to_tracelet(embedding, model_name))
 
 
+# To develop in this plugin
 # if __name__ == "__main__":
 #     run_with_hanskenpy(BERTEmbeddings, endpoint='http://localhost:9091/gatekeeper/',
-#                        # the keystore REST endpoint when this script was exported, note that
-#                        # this can be overridden with --keystore
 #                        keystore='http://localhost:9090/keystore/',
-#                        # the project id of the project named "Semantic search",
 #                        project='326c693c-45bc-4648-b8e3-24abb4f43c1d')

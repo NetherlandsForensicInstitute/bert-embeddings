@@ -1,7 +1,5 @@
-FROM python:3.8
+FROM python:3.10
 
-# TODO See API breaking changes in 0.6.0
-# TODO Unpin the SDK
 RUN python -m pip install --no-cache hansken_extraction_plugin sentence-transformers
 
 LABEL maintainer="i.ellis@nfi.nl"
